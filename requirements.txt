@@ -1,0 +1,6 @@
+pybind11>=2.6.0
+numpy>=1.19.0
+pandas>=1.0.0
+h5py>=2.10.0
+setuptools>=42
+wheel

@@ -1,0 +1,40 @@
+# Custom Makefile for Python integration
+CC = gcc
+CXX = g++
+NVCC = nvcc
+CFLAGS = -O3 -Wall -fPIC -Iinclude -Isrc
+CXXFLAGS = $(CFLAGS) -std=c++11
+LDFLAGS = -shared
+
+# Detect CUDA availability
+HAS_CUDA := $(shell which nvcc >/dev/null 2>&1 && echo 1 || echo 0)
+
+ifeq ($(HAS_CUDA),1)
+    CUDA_FLAGS = -DUSE_CUDA -I/usr/local/cuda/include
+    CUDA_LIBS = -lcudart -L/usr/local/cuda/lib64
+    NVCC_FLAGS = -arch=sm_50 -Xcompiler -fPIC
+endif
+
+# Source files for eventalign functionality
+EVENTALIGN_SRCS = src/eventalign.c src/align.c src/index.c src/common.c src/squiggle.c
+EVENTALIGN_OBJS = $(EVENTALIGN_SRCS:.c=.o)
+
+# GPU versions if available
+ifeq ($(HAS_CUDA),1)
+    GPU_SRCS = src/eventalign_gpu.cu src/align_gpu.cu
+    GPU_OBJS = $(GPU_SRCS:.cu=.o)
+endif
+
+all: libf5c_eventalign.so
+
+libf5c_eventalign.so: $(EVENTALIGN_OBJS) $(GPU_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(CUDA_LIBS) -lm -lz -lhdf5 -lpthread
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(CUDA_FLAGS) -c -o $@ $<
+
+%.o: %.cu
+	$(NVCC) $(NVCC_FLAGS) $(CUDA_FLAGS) -c -o $@ $<
+
+clean:
+	rm -f $(EVENTALIGN_OBJS) $(GPU_OBJS) libf5c_eventalign.so
